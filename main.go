@@ -1,17 +1,22 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 )
 
 func main() {
-	fmt.Println("Hello from my Chirpy back-end...")
+	const filePathRoot = "."
+	const port = "8080"
+
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir(".")))
-	server := http.Server{
-		Addr: ":8080",
+	mux.Handle("/", http.FileServer(http.Dir(filePathRoot)))
+	mux.Handle("/assets", http.FileServer(http.Dir(filePathRoot+"/assets/logo.png")))
+
+	srv := &http.Server{
+		Addr:    ":" + port,
 		Handler: mux,
 	}
-	server.ListenAndServe()
+	log.Printf("Serving files from %s on port: %s\n", filePathRoot, port)
+	log.Fatal(srv.ListenAndServe())
 }
