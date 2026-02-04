@@ -3,17 +3,26 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
+
 
 func handlerChirpValidation(w http.ResponseWriter, r *http.Request) {
 	charLimit := 140
+	profanities := map[string]struct{} {
+	"kerfuffle": {},
+	"sharbert": {},
+	"fornax": {},
+	}
 
 	type chirpBody struct {
 		Body string `json:"body"`
 	}
 
-	type validResponse struct {
+	type returnVals struct {
+		Cleaned string `json:"cleaned_body"`
 	}
+
 
 	decoder := json.NewDecoder(r.Body)
 	chirp := chirpBody{}
@@ -22,10 +31,22 @@ func handlerChirpValidation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Consider using utf8.RuneCountInString
 	if len(chirp.Body) > charLimit {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 		return
 	}
-	respondWithJSON(w, http.StatusOK, true)
+	respondWithJSON(w, http.StatusOK, returnVals{
+		Cleaned: filterProfanity(chirp.Body, profanities),
+	})
+}
+
+func filterProfanity(msg string, profanities map[string]struct{}) string {
+	words := strings.Split(msg, " ")
+	censor_msg := "****"
+	for i, word := range words {
+		if _, ok := profanities[strings.ToLower(word)]; ok {
+			words[i] = censor_msg
+		}
+	}
+	return strings.Join(words, " ")
 }
