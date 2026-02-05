@@ -1,14 +1,20 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 )
 
-func (cfg *apiConfig) handlerReset(w http.ResponseWriter, _ *http.Request) {
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// Clear DB
+	cfg.db.DeleteUsers(r.Context())
+	// Reset Server Hits Count
 	cfg.fileserverHits.Store(0)
+	// Write Header
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	hits_msg := fmt.Sprintf("File Server Hits Reset to: %v", cfg.fileserverHits.Load())
-	w.Write([]byte(hits_msg))
+	w.Write([]byte("Server Reset"))
 }
