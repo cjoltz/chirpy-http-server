@@ -12,16 +12,16 @@ import (
 	"github.com/google/uuid"
 )
 
-	type Chirp struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    uuid.UUID `json:"user_id"`
-	}
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
 
 func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
-	// Decoding 
+	// Decoding
 	type chirpRequest struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -51,13 +51,7 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	log.Println("Chirp posted to DB")
 
 	// Send response
-	respondWithJSON(w, http.StatusCreated, Chirp{
-		ID:        c.ID,
-		CreatedAt: c.CreatedAt,
-		UpdatedAt: c.UpdatedAt,
-		Body:      c.Body,
-		UserID:    c.UserID,
-	})
+	respondWithJSON(w, http.StatusCreated, convertDBChirpToChirp(c))
 }
 
 func validateChirp(body string) (string, error) {
@@ -68,7 +62,7 @@ func validateChirp(body string) (string, error) {
 		"fornax":    {},
 	}
 	// Check Length
-	if len(body) > charLimit { 
+	if len(body) > charLimit {
 		return "", errors.New("Chirp is too long")
 	}
 	cleaned := filterProfanity(body, profanities)

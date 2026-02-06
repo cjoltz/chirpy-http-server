@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cjoltz/chirpy-http-server/internal/auth"
+	"github.com/cjoltz/chirpy-http-server/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -16,23 +18,33 @@ type User struct {
 }
 
 func (cfg *apiConfig) handlerUserCreate(w http.ResponseWriter, r *http.Request) {
-	type requestEmail struct {
-		Email string `json:"email"`
+	type requestUser struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
-
+	// Decode Request
 	decoder := json.NewDecoder(r.Body)
-	params := requestEmail{}
+	params := requestUser{}
 	if err := decoder.Decode(&params); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
 		return
 	}
-
-	user, err := cfg.db.CreateUser(r.Context(), params.Email)
+	// Hash Pasword
+	pw, err := auth.HashPassword(params.Password)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		respondWithError(w, http.StatusInternalServerError, "Failed to create user", err)
+		return
+	} 
+	// Store user in db
+	user, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
+		Email: params.Email,
+		HashedPassword: pw,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create user entry", err)
 		return
 	}
-
+	// Respond with all user info, except the password
 	u := User{
 		ID:        user.ID,
 		CreatedAt: user.CreatedAt,
