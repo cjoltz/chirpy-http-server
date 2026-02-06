@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -120,50 +121,40 @@ func TestValidateJWT(t *testing.T) {
 	}
 }
 
-// func TestValidateJWT(t *testing.T) {
-// 	userID := uuid.New()
-// 	validToken, _ := MakeJWT(userID, "secret", time.Hour)
+func TestGetBearerToken(t *testing.T) {
+	token := "hellofromtoken"
+	headerVal := "Bearer " + token
 
-// 	tests := []struct {
-// 		name        string
-// 		tokenString string
-// 		tokenSecret string
-// 		wantUserID  uuid.UUID
-// 		wantErr     bool
-// 	}{
-// 		{
-// 			name:        "Valid token",
-// 			tokenString: validToken,
-// 			tokenSecret: "secret",
-// 			wantUserID:  userID,
-// 			wantErr:     false,
-// 		},
-// 		{
-// 			name:        "Invalid token",
-// 			tokenString: "invalid.token.string",
-// 			tokenSecret: "secret",
-// 			wantUserID:  uuid.Nil,
-// 			wantErr:     true,
-// 		},
-// 		{
-// 			name:        "Wrong Secret",
-// 			tokenString: validToken,
-// 			tokenSecret: "wrong_secret",
-// 			wantUserID:  uuid.Nil,
-// 			wantErr:     true,
-// 		},
-// 	}
+	tests := []struct {
+		name      string
+		Header    http.Header
+		wantToken string
+		wantErr   bool
+	}{
+		{
+			name:      "Valid Header",
+			Header:    http.Header{"Authorization": {headerVal}},
+			wantToken: token,
+			wantErr:   false,
+		},
+		{
+			name:      "No Bearer in Header",
+			Header:    http.Header{"Content-Type": {"plain/text"}},
+			wantToken: "",
+			wantErr:   true,
+		},
+	}
 
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			gotUserID, err := ValidateJWT(tt.tokenString, tt.tokenSecret)
-// 			if (err != nil) != tt.wantErr {
-// 				t.Errorf("ValidateJWT() error = %v, wantErr %v", err, tt.wantErr)
-// 				return
-// 			}
-// 			if gotUserID != tt.wantUserID {
-// 				t.Errorf("ValidateJWT() gotUserID = %v, want %v", gotUserID, tt.wantUserID)
-// 			}
-// 		})
-// 	}
-// }
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotToken, err := GetBearerToken(tc.Header)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("GetBearerToken() error = %v, wantErr %v", err, tc.wantErr)
+				return
+			}
+			if gotToken != tc.wantToken {
+				t.Errorf("GetBearerToken() gotToken = %v, want %v", gotToken, tc.wantToken)
+			}
+		})
+	}
+}

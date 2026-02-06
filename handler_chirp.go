@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cjoltz/chirpy-http-server/internal/auth"
 	"github.com/cjoltz/chirpy-http-server/internal/database"
 	"github.com/google/uuid"
 )
@@ -21,10 +22,10 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
-	// Decoding
+	defer log.Println("Chirp Post Handled")
+	// Decode Request
 	type chirpRequest struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := chirpRequest{}
@@ -34,7 +35,20 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Chirp Request Decoded Successfully")
 
-	// Validation
+	// User Validation
+	requestToken, err := auth.GetBearerToken(r.Header)
+
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "User not authenticated. Login first", err)
+		return
+	}
+	requestingUser, err := auth.ValidateJWT(requestToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Failed to validate authentication", err)
+		return
+	}
+
+	// Chirp Validation
 	cleaned, err := validateChirp(params.Body)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error(), err)
@@ -43,7 +57,7 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	log.Println("Chirp Request Validated Successfully")
 
 	// post chirp to db
-	c, err := cfg.db.PostChirp(r.Context(), database.PostChirpParams{Body: cleaned, UserID: params.UserID})
+	c, err := cfg.db.PostChirp(r.Context(), database.PostChirpParams{Body: cleaned, UserID: requestingUser})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create to chirp", err)
 		return
